@@ -264,6 +264,30 @@ func BenchmarkFromString(b *testing.B) {
 	})
 }
 
+func BenchmarkUnmarshalText(b *testing.B) {
+	b.Run("canonical", func(b *testing.B) {
+		text := Must(FromString("6ba7b810-9dad-11d1-80b4-00c04fd430c8")).Bytes()
+		var u UUID
+		for i := 0; i < b.N; i++ {
+			_ = u.UnmarshalText(text)
+		}
+	})
+	b.Run("urn", func(b *testing.B) {
+		text := Must(FromString("urn:uuid:6ba7b810-9dad-11d1-80b4-00c04fd430c8")).Bytes()
+		var u UUID
+		for i := 0; i < b.N; i++ {
+			_ = u.UnmarshalText(text)
+		}
+	})
+	b.Run("braced", func(b *testing.B) {
+		text := Must(FromString("{6ba7b810-9dad-11d1-80b4-00c04fd430c8}")).Bytes()
+		var u UUID
+		for i := 0; i < b.N; i++ {
+			_ = u.UnmarshalText(text)
+		}
+	})
+}
+
 func BenchmarkMarshalBinary(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		codecTestUUID.MarshalBinary()
