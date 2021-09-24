@@ -22,8 +22,7 @@
 package uuid
 
 import (
-	"bytes"
-	"encoding/hex"
+	"errors"
 	"fmt"
 )
 
@@ -66,7 +65,9 @@ func FromStringOrNil(input string) UUID {
 // MarshalText implements the encoding.TextMarshaler interface.
 // The encoding is the same as returned by the String() method.
 func (u UUID) MarshalText() ([]byte, error) {
-	return []byte(u.String()), nil
+	var buf [36]byte
+	encodeHex(buf[:], u)
+	return buf[:], nil
 }
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
@@ -105,18 +106,40 @@ func (u UUID) MarshalText() ([]byte, error) {
 //
 func (u *UUID) UnmarshalText(text []byte) error {
 	switch len(text) {
-	case 32:
-		return u.decodeHashLike(text)
+	case 32: // hash
+	case 36: // canonical
 	case 34, 38:
-		return u.decodeBraced(text)
-	case 36:
-		return u.decodeCanonical(text)
+		if text[0] != '{' || text[len(text)-1] != '}' {
+			return fmt.Errorf("uuid: incorrect UUID format in string %q", text)
+		}
+		text = text[1 : len(text)-1]
 	case 41, 45:
-		return u.decodeURN(text)
+		if string(text[:9]) != "urn:uuid:" {
+			return fmt.Errorf("uuid: incorrect UUID format in string %q", text[:9])
+		}
+		text = text[9:]
 	default:
 		return fmt.Errorf("uuid: incorrect UUID length %d in string %q", len(text), text)
 	}
+	if len(text) == 36 {
+		return u.decodeCanonical(text)
+	}
+	return u.decodeHashLike(text)
 }
+
+func fromHexChar(c byte) (byte, bool) {
+	switch {
+	case '0' <= c && c <= '9':
+		return c - '0', true
+	case 'a' <= c && c <= 'f':
+		return c - 'a' + 10, true
+	case 'A' <= c && c <= 'F':
+		return c - 'A' + 10, true
+	}
+	return 0, false
+}
+
+var errInvalidFormat = errors.New("invalid UUID format")
 
 // decodeCanonical decodes UUID strings that are formatted as defined in RFC-4122 (section 3):
 // "6ba7b810-9dad-11d1-80b4-00c04fd430c8".
@@ -125,74 +148,37 @@ func (u *UUID) decodeCanonical(t []byte) error {
 		return fmt.Errorf("uuid: incorrect UUID format in string %q", t)
 	}
 
-	src := t
-	dst := u[:]
-
-	for i, byteGroup := range byteGroups {
-		if i > 0 {
-			src = src[1:] // skip dash
+	for i, x := range [16]int{
+		0, 2, 4, 6,
+		9, 11,
+		14, 16,
+		19, 21,
+		24, 26, 28, 30, 32, 34,
+	} {
+		a, ok1 := fromHexChar(t[x])
+		b, ok2 := fromHexChar(t[x+1])
+		if ok1 && ok2 {
+			u[i] = (a << 4) | b
+		} else {
+			return errInvalidFormat
 		}
-		_, err := hex.Decode(dst[:byteGroup/2], src[:byteGroup])
-		if err != nil {
-			return err
-		}
-		src = src[byteGroup:]
-		dst = dst[byteGroup/2:]
 	}
-
 	return nil
 }
 
 // decodeHashLike decodes UUID strings that are using the following format:
 //  "6ba7b8109dad11d180b400c04fd430c8".
 func (u *UUID) decodeHashLike(t []byte) error {
-	src := t[:]
-	dst := u[:]
-
-	_, err := hex.Decode(dst, src)
-	return err
-}
-
-// decodeBraced decodes UUID strings that are using the following formats:
-//  "{6ba7b810-9dad-11d1-80b4-00c04fd430c8}"
-//  "{6ba7b8109dad11d180b400c04fd430c8}".
-func (u *UUID) decodeBraced(t []byte) error {
-	l := len(t)
-
-	if t[0] != '{' || t[l-1] != '}' {
-		return fmt.Errorf("uuid: incorrect UUID format in string %q", t)
+	for i := 0; i < 32; i += 2 {
+		a, ok1 := fromHexChar(t[i])
+		b, ok2 := fromHexChar(t[i+1])
+		if ok1 && ok2 {
+			u[i/2] = (a << 4) | b
+		} else {
+			return errInvalidFormat
+		}
 	}
-
-	return u.decodePlain(t[1 : l-1])
-}
-
-// decodeURN decodes UUID strings that are using the following formats:
-//  "urn:uuid:6ba7b810-9dad-11d1-80b4-00c04fd430c8"
-//  "urn:uuid:6ba7b8109dad11d180b400c04fd430c8".
-func (u *UUID) decodeURN(t []byte) error {
-	total := len(t)
-
-	urnUUIDPrefix := t[:9]
-
-	if !bytes.Equal(urnUUIDPrefix, urnPrefix) {
-		return fmt.Errorf("uuid: incorrect UUID format in string %q", t)
-	}
-
-	return u.decodePlain(t[9:total])
-}
-
-// decodePlain decodes UUID strings that are using the following formats:
-//  "6ba7b810-9dad-11d1-80b4-00c04fd430c8" or in hash-like format
-//  "6ba7b8109dad11d180b400c04fd430c8".
-func (u *UUID) decodePlain(t []byte) error {
-	switch len(t) {
-	case 32:
-		return u.decodeHashLike(t)
-	case 36:
-		return u.decodeCanonical(t)
-	default:
-		return fmt.Errorf("uuid: incorrect UUID length %d in string %q", len(t), t)
-	}
+	return nil
 }
 
 // MarshalBinary implements the encoding.BinaryMarshaler interface.

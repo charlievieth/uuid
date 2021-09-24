@@ -254,3 +254,15 @@ func TestTimestampFromV6(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkIsNil(b *testing.B) {
+	var zero UUID
+	for i := 0; i < b.N; i++ {
+		if !zero.IsZero() {
+			b.Fatal("wat")
+		}
+		// if zero != Nil {
+		// 	b.Fatal("wat")
+		// }
+	}
+}

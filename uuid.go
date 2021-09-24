@@ -182,22 +182,24 @@ func (u UUID) Bytes() []byte {
 	return u[:]
 }
 
+func encodeHex(dst []byte, u UUID) {
+	hex.Encode(dst, u[0:4])
+	dst[8] = '-'
+	hex.Encode(dst[9:13], u[4:6])
+	dst[13] = '-'
+	hex.Encode(dst[14:18], u[6:8])
+	dst[18] = '-'
+	hex.Encode(dst[19:23], u[8:10])
+	dst[23] = '-'
+	hex.Encode(dst[24:], u[10:])
+}
+
 // String returns a canonical RFC-4122 string representation of the UUID:
 // xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
 func (u UUID) String() string {
-	buf := make([]byte, 36)
-
-	hex.Encode(buf[0:8], u[0:4])
-	buf[8] = '-'
-	hex.Encode(buf[9:13], u[4:6])
-	buf[13] = '-'
-	hex.Encode(buf[14:18], u[6:8])
-	buf[18] = '-'
-	hex.Encode(buf[19:23], u[8:10])
-	buf[23] = '-'
-	hex.Encode(buf[24:], u[10:])
-
-	return string(buf)
+	var buf [36]byte
+	encodeHex(buf[:], u)
+	return string(buf[:])
 }
 
 // Format implements fmt.Formatter for UUID values.
@@ -279,6 +281,11 @@ func (u *UUID) SetVariant(v byte) {
 		u[8] = (u[8]&(0xff>>3) | (0x07 << 5))
 	}
 }
+
+var zero = UUID{}
+
+// IsZero reports if the UUID is zero.
+func (u *UUID) IsZero() bool { return *u == zero }
 
 // Must is a helper that wraps a call to a function returning (UUID, error)
 // and panics if the error is non-nil. It is intended for use in variable
