@@ -46,9 +46,9 @@ func FromBytesOrNil(input []byte) UUID {
 
 // FromString returns a UUID parsed from the input string.
 // Input is expected in a form accepted by UnmarshalText.
-func FromString(input string) (UUID, error) {
-	u := UUID{}
-	err := u.UnmarshalText([]byte(input))
+func FromString(text string) (UUID, error) {
+	var u UUID
+	err := u.Parse(text)
 	return u, err
 }
 
@@ -127,41 +127,95 @@ func (u *UUID) UnmarshalText(text []byte) error {
 	return u.decodeHashLike(text)
 }
 
-func fromHexChar(c byte) (byte, bool) {
-	switch {
-	case '0' <= c && c <= '9':
-		return c - '0', true
-	case 'a' <= c && c <= 'f':
-		return c - 'a' + 10, true
-	case 'A' <= c && c <= 'F':
-		return c - 'A' + 10, true
+// Parse parses the UUID stored in the string text. Parsing and supported
+// formats are the same as UnmarshalText.
+func (u *UUID) Parse(text string) error {
+	switch len(text) {
+	case 32: // hash
+	case 36: // canonical
+	case 34, 38:
+		if text[0] != '{' || text[len(text)-1] != '}' {
+			return fmt.Errorf("uuid: incorrect UUID format in string %q", text)
+		}
+		text = text[1 : len(text)-1]
+	case 41, 45:
+		if string(text[:9]) != "urn:uuid:" {
+			return fmt.Errorf("uuid: incorrect UUID format in string %q", text[:9])
+		}
+		text = text[9:]
+	default:
+		return fmt.Errorf("uuid: incorrect UUID length %d in string %q", len(text), text)
 	}
-	return 0, false
+	if len(text) == 36 {
+		return u.decodeCanonicalString(text)
+	}
+	return u.decodeHashLikeString(text)
 }
 
 var errInvalidFormat = errors.New("invalid UUID format")
 
+const invalidHex = 255
+
+func fromHexChar(c byte) byte {
+	switch {
+	case '0' <= c && c <= '9':
+		return c - '0'
+	case 'a' <= c && c <= 'f':
+		return c - 'a' + 10
+	case 'A' <= c && c <= 'F':
+		return c - 'A' + 10
+	}
+	return invalidHex
+}
+
 // decodeCanonical decodes UUID strings that are formatted as defined in RFC-4122 (section 3):
 // "6ba7b810-9dad-11d1-80b4-00c04fd430c8".
 func (u *UUID) decodeCanonical(t []byte) error {
-	if t[8] != '-' || t[13] != '-' || t[18] != '-' || t[23] != '-' {
+	if len(t) != 36 || t[8] != '-' || t[13] != '-' || t[18] != '-' || t[23] != '-' {
 		return fmt.Errorf("uuid: incorrect UUID format in string %q", t)
 	}
 
-	for i, x := range [16]int{
+	for i, x := range [16]byte{
 		0, 2, 4, 6,
 		9, 11,
 		14, 16,
 		19, 21,
 		24, 26, 28, 30, 32, 34,
 	} {
-		a, ok1 := fromHexChar(t[x])
-		b, ok2 := fromHexChar(t[x+1])
-		if ok1 && ok2 {
-			u[i] = (a << 4) | b
-		} else {
+		a := fromHexChar(t[x])
+		if a == invalidHex {
 			return errInvalidFormat
 		}
+		b := fromHexChar(t[x+1])
+		if b == invalidHex {
+			return errInvalidFormat
+		}
+		u[i] = (a << 4) | b
+	}
+	return nil
+}
+
+func (u *UUID) decodeCanonicalString(t string) error {
+	if len(t) != 36 || t[8] != '-' || t[13] != '-' || t[18] != '-' || t[23] != '-' {
+		return fmt.Errorf("uuid: incorrect UUID format in string %q", t)
+	}
+
+	for i, x := range [16]byte{
+		0, 2, 4, 6,
+		9, 11,
+		14, 16,
+		19, 21,
+		24, 26, 28, 30, 32, 34,
+	} {
+		a := fromHexChar(t[x])
+		if a == invalidHex {
+			return errInvalidFormat
+		}
+		b := fromHexChar(t[x+1])
+		if b == invalidHex {
+			return errInvalidFormat
+		}
+		u[i] = (a << 4) | b
 	}
 	return nil
 }
@@ -170,13 +224,30 @@ func (u *UUID) decodeCanonical(t []byte) error {
 //  "6ba7b8109dad11d180b400c04fd430c8".
 func (u *UUID) decodeHashLike(t []byte) error {
 	for i := 0; i < 32; i += 2 {
-		a, ok1 := fromHexChar(t[i])
-		b, ok2 := fromHexChar(t[i+1])
-		if ok1 && ok2 {
-			u[i/2] = (a << 4) | b
-		} else {
+		a := fromHexChar(t[i])
+		if a == invalidHex {
 			return errInvalidFormat
 		}
+		b := fromHexChar(t[i+1])
+		if b == invalidHex {
+			return errInvalidFormat
+		}
+		u[i/2] = (a << 4) | b
+	}
+	return nil
+}
+
+func (u *UUID) decodeHashLikeString(t string) error {
+	for i := 0; i < 32; i += 2 {
+		a := fromHexChar(t[i])
+		if a == invalidHex {
+			return errInvalidFormat
+		}
+		b := fromHexChar(t[i+1])
+		if b == invalidHex {
+			return errInvalidFormat
+		}
+		u[i/2] = (a << 4) | b
 	}
 	return nil
 }

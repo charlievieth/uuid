@@ -302,6 +302,16 @@ func BenchmarkMarshalText(b *testing.B) {
 	}
 }
 
+func BenchmarkParseV4(b *testing.B) {
+	const text = "f52a747a-983f-45f7-90b5-e84d70f470dd"
+	for i := 0; i < b.N; i++ {
+		var u UUID
+		if err := u.Parse(text); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 var seedFuzzCorpus = flag.Bool("seed_fuzz_corpus", false, "seed fuzz test corpus")
 
 func TestSeedFuzzCorpus(t *testing.T) {
