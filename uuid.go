@@ -202,6 +202,13 @@ func (u UUID) String() string {
 	return string(buf[:])
 }
 
+// Append appends a canonical RFC-4122 string representation of the UUID to dst.
+func (u UUID) Append(dst []byte) []byte {
+	var buf [36]byte
+	encodeHex(buf[:], u)
+	return append(dst, buf[:]...)
+}
+
 // Format implements fmt.Formatter for UUID values.
 //
 // The behavior is as follows:

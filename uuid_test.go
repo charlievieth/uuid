@@ -64,6 +64,14 @@ func testUUIDString(t *testing.T) {
 	}
 }
 
+func testUUIDAppend(t *testing.T) {
+	got := string(NamespaceDNS.Append(nil))
+	want := "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+	if got != want {
+		t.Errorf("%v.String() = %q, want %q", NamespaceDNS, got, want)
+	}
+}
+
 func testUUIDVersion(t *testing.T) {
 	u := UUID{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 	if got, want := u.Version(), V1; got != want {
