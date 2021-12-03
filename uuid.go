@@ -272,11 +272,6 @@ func (u *UUID) SetVariant(v byte) {
 	}
 }
 
-var zero = UUID{}
-
-// IsZero reports if the UUID is zero.
-func (u *UUID) IsZero() bool { return *u == zero }
-
 // Must is a helper that wraps a call to a function returning (UUID, error)
 // and panics if the error is non-nil. It is intended for use in variable
 // initializations such as
