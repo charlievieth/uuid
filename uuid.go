@@ -44,8 +44,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"io"
-	"strings"
 	"time"
 )
 
@@ -209,6 +207,14 @@ func (u UUID) Append(dst []byte) []byte {
 	return append(dst, buf[:]...)
 }
 
+func toUpperHex(b []byte) {
+	for i, c := range b {
+		if 'a' <= c && c <= 'f' {
+			b[i] = c - ('a' - 'A')
+		}
+	}
+}
+
 // Format implements fmt.Formatter for UUID values.
 //
 // The behavior is as follows:
@@ -219,52 +225,33 @@ func (u UUID) Append(dst []byte) []byte {
 // All other verbs not handled directly by the fmt package (like '%p') are unsupported and will return
 // "%!verb(uuid.UUID=value)" as recommended by the fmt package.
 func (u UUID) Format(f fmt.State, c rune) {
+	if c == 'v' && f.Flag('#') {
+		fmt.Fprintf(f, "%#v", [Size]byte(u))
+		return
+	}
 	switch c {
 	case 'x', 'X':
-		s := hex.EncodeToString(u.Bytes())
+		b := make([]byte, 32)
+		hex.Encode(b, u[:])
 		if c == 'X' {
-			s = strings.Map(toCapitalHexDigits, s)
+			toUpperHex(b)
 		}
-		_, _ = io.WriteString(f, s)
-	case 'v':
-		var s string
-		if f.Flag('#') {
-			s = fmt.Sprintf("%#v", [Size]byte(u))
-		} else {
-			s = u.String()
-		}
-		_, _ = io.WriteString(f, s)
-	case 's', 'S':
-		s := u.String()
+		_, _ = f.Write(b)
+	case 'v', 's', 'S':
+		b, _ := u.MarshalText()
 		if c == 'S' {
-			s = strings.Map(toCapitalHexDigits, s)
+			toUpperHex(b)
 		}
-		_, _ = io.WriteString(f, s)
+		_, _ = f.Write(b)
 	case 'q':
-		_, _ = io.WriteString(f, `"`+u.String()+`"`)
+		b := make([]byte, 38)
+		b[0] = '"'
+		encodeHex(b[1:], u)
+		b[37] = '"'
+		_, _ = f.Write(b)
 	default:
 		// invalid/unsupported format verb
 		fmt.Fprintf(f, "%%!%c(uuid.UUID=%s)", c, u.String())
-	}
-}
-
-func toCapitalHexDigits(ch rune) rune {
-	// convert a-f hex digits to A-F
-	switch ch {
-	case 'a':
-		return 'A'
-	case 'b':
-		return 'B'
-	case 'c':
-		return 'C'
-	case 'd':
-		return 'D'
-	case 'e':
-		return 'E'
-	case 'f':
-		return 'F'
-	default:
-		return ch
 	}
 }
 

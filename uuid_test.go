@@ -24,6 +24,7 @@ package uuid
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"testing"
 	"time"
 )
@@ -58,14 +59,6 @@ func testUUIDBytes(t *testing.T) {
 
 func testUUIDString(t *testing.T) {
 	got := NamespaceDNS.String()
-	want := "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
-	if got != want {
-		t.Errorf("%v.String() = %q, want %q", NamespaceDNS, got, want)
-	}
-}
-
-func testUUIDAppend(t *testing.T) {
-	got := string(NamespaceDNS.Append(nil))
 	want := "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
 	if got != want {
 		t.Errorf("%v.String() = %q, want %q", NamespaceDNS, got, want)
@@ -263,14 +256,22 @@ func TestTimestampFromV6(t *testing.T) {
 	}
 }
 
-func BenchmarkIsNil(b *testing.B) {
-	var zero UUID
-	for i := 0; i < b.N; i++ {
-		if !zero.IsZero() {
-			b.Fatal("wat")
-		}
-		// if zero != Nil {
-		// 	b.Fatal("wat")
-		// }
+func BenchmarkFormat(b *testing.B) {
+	var tests = [...]string{
+		"%s",
+		"%S",
+		"%q",
+		"%x",
+		"%X",
+		"%v",
+		"%+v",
+		"%#v",
+	}
+	for _, x := range tests {
+		b.Run(x[1:], func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				fmt.Fprintf(io.Discard, x, &codecTestUUID)
+			}
+		})
 	}
 }
