@@ -183,11 +183,8 @@ func (u *UUID) decodeCanonical(t []byte) error {
 		24, 26, 28, 30, 32, 34,
 	} {
 		a := fromHexChar(t[x])
-		if a == invalidHex {
-			return errInvalidFormat
-		}
 		b := fromHexChar(t[x+1])
-		if b == invalidHex {
+		if a|b == invalidHex {
 			return errInvalidFormat
 		}
 		u[i] = (a << 4) | b
@@ -208,11 +205,8 @@ func (u *UUID) decodeCanonicalString(t string) error {
 		24, 26, 28, 30, 32, 34,
 	} {
 		a := fromHexChar(t[x])
-		if a == invalidHex {
-			return errInvalidFormat
-		}
 		b := fromHexChar(t[x+1])
-		if b == invalidHex {
+		if a|b == invalidHex {
 			return errInvalidFormat
 		}
 		u[i] = (a << 4) | b
@@ -225,11 +219,8 @@ func (u *UUID) decodeCanonicalString(t string) error {
 func (u *UUID) decodeHashLike(t []byte) error {
 	for i := 0; i < 32; i += 2 {
 		a := fromHexChar(t[i])
-		if a == invalidHex {
-			return errInvalidFormat
-		}
 		b := fromHexChar(t[i+1])
-		if b == invalidHex {
+		if a|b == invalidHex {
 			return errInvalidFormat
 		}
 		u[i/2] = (a << 4) | b
@@ -240,11 +231,8 @@ func (u *UUID) decodeHashLike(t []byte) error {
 func (u *UUID) decodeHashLikeString(t string) error {
 	for i := 0; i < 32; i += 2 {
 		a := fromHexChar(t[i])
-		if a == invalidHex {
-			return errInvalidFormat
-		}
 		b := fromHexChar(t[i+1])
-		if b == invalidHex {
+		if a|b == invalidHex {
 			return errInvalidFormat
 		}
 		u[i/2] = (a << 4) | b

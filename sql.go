@@ -47,7 +47,9 @@ func (u *UUID) Scan(src interface{}) error {
 		return u.UnmarshalText(src)
 
 	case string:
-		return u.Parse(src)
+		uu, err := FromString(src)
+		*u = uu
+		return err
 	}
 
 	return fmt.Errorf("uuid: cannot convert %T to UUID", src)
