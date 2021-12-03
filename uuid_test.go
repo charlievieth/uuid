@@ -24,7 +24,6 @@ package uuid
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"testing"
 	"time"
 )
@@ -253,25 +252,5 @@ func TestTimestampFromV6(t *testing.T) {
 		case tt.want != got:
 			t.Errorf("TimestampFromV6(%v) got %v, want %v", tt.u, got, tt.want)
 		}
-	}
-}
-
-func BenchmarkFormat(b *testing.B) {
-	var tests = [...]string{
-		"%s",
-		"%S",
-		"%q",
-		"%x",
-		"%X",
-		"%v",
-		"%+v",
-		"%#v",
-	}
-	for _, x := range tests {
-		b.Run(x[1:], func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				fmt.Fprintf(io.Discard, x, &codecTestUUID)
-			}
-		})
 	}
 }
