@@ -131,12 +131,6 @@ func TimestampFromV6(u UUID) (Timestamp, error) {
 	return Timestamp(uint64(low) + (uint64(mid) << 12) + (uint64(hi) << 28)), nil
 }
 
-// String parse helpers.
-var (
-	urnPrefix  = []byte("urn:uuid:")
-	byteGroups = []int{8, 4, 4, 4, 12}
-)
-
 // Nil is the nil UUID, as specified in RFC-4122, that has all 128 bits set to
 // zero.
 var Nil = UUID{}
@@ -180,6 +174,8 @@ func (u UUID) Bytes() []byte {
 	return u[:]
 }
 
+// encodeHex encodes the canonical RFC-4122 form of UUID u into the
+// first 36 bytes dst.
 func encodeHex(dst []byte, u UUID) {
 	hex.Encode(dst, u[0:4])
 	dst[8] = '-'
