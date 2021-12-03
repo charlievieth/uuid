@@ -154,8 +154,6 @@ func (u *UUID) Parse(text string) error {
 
 var errInvalidFormat = errors.New("invalid UUID format")
 
-const invalidHex = 255
-
 func fromHexChar(c byte) byte {
 	switch {
 	case '0' <= c && c <= '9':
@@ -165,7 +163,7 @@ func fromHexChar(c byte) byte {
 	case 'A' <= c && c <= 'F':
 		return c - 'A' + 10
 	}
-	return invalidHex
+	return 255
 }
 
 // decodeCanonical decodes UUID strings that are formatted as defined in RFC-4122 (section 3):
@@ -184,7 +182,7 @@ func (u *UUID) decodeCanonical(t []byte) error {
 	} {
 		a := fromHexChar(t[x])
 		b := fromHexChar(t[x+1])
-		if a|b == invalidHex {
+		if a|b == 255 {
 			return errInvalidFormat
 		}
 		u[i] = (a << 4) | b
@@ -206,7 +204,7 @@ func (u *UUID) decodeCanonicalString(t string) error {
 	} {
 		a := fromHexChar(t[x])
 		b := fromHexChar(t[x+1])
-		if a|b == invalidHex {
+		if a|b == 255 {
 			return errInvalidFormat
 		}
 		u[i] = (a << 4) | b
@@ -220,7 +218,7 @@ func (u *UUID) decodeHashLike(t []byte) error {
 	for i := 0; i < 32; i += 2 {
 		a := fromHexChar(t[i])
 		b := fromHexChar(t[i+1])
-		if a|b == invalidHex {
+		if a|b == 255 {
 			return errInvalidFormat
 		}
 		u[i/2] = (a << 4) | b
@@ -232,7 +230,7 @@ func (u *UUID) decodeHashLikeString(t string) error {
 	for i := 0; i < 32; i += 2 {
 		a := fromHexChar(t[i])
 		b := fromHexChar(t[i+1])
-		if a|b == invalidHex {
+		if a|b == 255 {
 			return errInvalidFormat
 		}
 		u[i/2] = (a << 4) | b
